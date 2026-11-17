@@ -63,21 +63,30 @@ cd mole-reporting
 git submodule update --init --recursive
 ```
 
-Install `uv` and a Python version **3.12 or newer**, then run the MOLE
-end-to-end test and the VDAF circuit tests:
+### End-to-end reporting flow
+
+Install `uv` and Python **3.12 or newer**. From the root of this repository,
+run the one test that exercises the complete reference flow:
 
 ```sh
 cd mole-drafts/poc
-PYTHONPATH=../../draft-irtf-cfrg-vdaf/poc uv run --python 3.12 --extra test pytest tests/test_quality_flow.py tests/test_quality_binding.py -q
-PYTHONPATH=../../draft-irtf-cfrg-vdaf/poc uv run --python 3.12 --extra test pytest ../../draft-irtf-cfrg-vdaf/poc/tests/test_commitment_bound_histogram.py -q
+PYTHONPATH=../../draft-irtf-cfrg-vdaf/poc uv run --python 3.12 --extra test pytest tests/test_quality_flow.py -q
 ```
 
-The end-to-end test endorses Anchor 1 in a three-Anchor set, redeems it,
-issues and presents an ACT credential, checks both VDAF shares against the
-fresh commitment, and recovers histogram `[0, 1, 0]`. To run the full MOLE
-Python suite from `mole-drafts/poc`:
+Expected result: `1 passed`. The test in
+[`tests/test_quality_flow.py`](mole-drafts/poc/tests/test_quality_flow.py)
+endorses Anchor 1 in a three-Anchor set, redeems it, issues and presents an
+ACT credential, verifies the Leader and Helper VDAF shares against the fresh
+report commitment, and asserts that the aggregate histogram is `[0, 1, 0]`.
+
+### Additional checks
+
+From `mole-drafts/poc`, run the commitment-binding tests, the VDAF circuit
+tests, or the full MOLE Python suite:
 
 ```sh
+PYTHONPATH=../../draft-irtf-cfrg-vdaf/poc uv run --python 3.12 --extra test pytest tests/test_quality_binding.py -q
+PYTHONPATH=../../draft-irtf-cfrg-vdaf/poc uv run --python 3.12 --extra test pytest ../../draft-irtf-cfrg-vdaf/poc/tests/test_commitment_bound_histogram.py -q
 PYTHONPATH=../../draft-irtf-cfrg-vdaf/poc uv run --python 3.12 --extra test pytest -q
 ```
 
