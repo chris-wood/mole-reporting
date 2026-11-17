@@ -65,12 +65,11 @@ git submodule update --init --recursive
 
 ### End-to-end reporting flow
 
-Install `uv` and Python **3.12 or newer**. From the root of this repository,
-run the one test that exercises the complete reference flow:
+Install `uv` and Python **3.12 or newer**. From the `mole-reporting` root, run
+the one test that exercises the complete reference flow:
 
 ```sh
-cd mole-drafts/poc
-PYTHONPATH=../../draft-irtf-cfrg-vdaf/poc uv run --python 3.12 --extra test pytest tests/test_quality_flow.py -q
+uv run --python 3.12 pytest mole-drafts/poc/tests/test_quality_flow.py -q
 ```
 
 Expected result: `1 passed`. The test in
@@ -79,24 +78,28 @@ endorses Anchor 1 in a three-Anchor set, redeems it, issues and presents an
 ACT credential, verifies the Leader and Helper VDAF shares against the fresh
 report commitment, and asserts that the aggregate histogram is `[0, 1, 0]`.
 
+The root [`pyproject.toml`](pyproject.toml) installs the **checked-out
+submodules** `mole-drafts/poc` and `draft-irtf-cfrg-vdaf/poc` as editable
+local packages. Their code comes from this clone; there is no manual
+`PYTHONPATH` setting or separate repository to prepare. The nested MOLE
+Sigma Protocols submodule must be initialized as shown above.
+
 ### Additional checks
 
-From `mole-drafts/poc`, run the commitment-binding tests, the VDAF circuit
-tests, or the full MOLE Python suite:
+From the same repository root, run all seven focused reporting tests, or the
+full MOLE Python suite:
 
 ```sh
-PYTHONPATH=../../draft-irtf-cfrg-vdaf/poc uv run --python 3.12 --extra test pytest tests/test_quality_binding.py -q
-PYTHONPATH=../../draft-irtf-cfrg-vdaf/poc uv run --python 3.12 --extra test pytest ../../draft-irtf-cfrg-vdaf/poc/tests/test_commitment_bound_histogram.py -q
-PYTHONPATH=../../draft-irtf-cfrg-vdaf/poc uv run --python 3.12 --extra test pytest -q
+uv run --python 3.12 pytest -q
+uv run --python 3.12 pytest mole-drafts/poc/tests -q
 ```
 
-With Rust and Cargo installed, run the focused tests from `libprio-rs`:
+With Rust and Cargo installed, run the focused Rust tests from this root too:
 
 ```sh
-cd ../../libprio-rs
-cargo test --features experimental commitment_bound
-cargo test --features experimental wrap_and_wrong_bucket
-cargo fmt --check
+cargo test --manifest-path libprio-rs/Cargo.toml --features experimental commitment_bound
+cargo test --manifest-path libprio-rs/Cargo.toml --features experimental wrap_and_wrong_bucket
+cargo fmt --manifest-path libprio-rs/Cargo.toml --check
 ```
 
 The reference tests model the Leader/Helper verification order but do not

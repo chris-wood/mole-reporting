@@ -1,0 +1,21 @@
+[project]
+name = "mole-reporting"
+version = "0.1.0"
+description = "Local test runner for the MOLE Anchor-bound reporting experiment"
+requires-python = ">=3.12"
+dependencies = [
+  "ec-ihat-ec-act-reference==0.1.0",
+  "vdaf-poc==0.0.1",
+  "pytest>=8,<9",
+]
+
+[tool.uv.sources]
+ec-ihat-ec-act-reference = { path = "mole-drafts/poc", editable = true }
+vdaf-poc = { path = "draft-irtf-cfrg-vdaf/poc", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = [
+  "mole-drafts/poc/tests/test_quality_flow.py",
+  "mole-drafts/poc/tests/test_quality_binding.py",
+  "draft-irtf-cfrg-vdaf/poc/tests/test_commitment_bound_histogram.py",
+]
