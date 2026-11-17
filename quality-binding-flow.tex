@@ -1,0 +1,361 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=0.85in]{geometry}
+
+\title{From IHAT Redemption to Anchor-Bound Quality Reports}
+\author{}
+\date{}
+
+\newcommand{\Ciss}{C_{\mathrm{iss}}}
+\newcommand{\Crep}{C_{\mathrm{rep}}}
+\newcommand{\Hash}{\mathsf{Hash}}
+\newcommand{\Enc}{\mathsf{Encode}}
+
+\begin{document}
+\maketitle
+
+\noindent\textbf{Status.} This is an experimental EC-IHAT/EC-ACT profile,
+not a description of the existing version-one wire protocols. It describes
+one successful Client--Moderator exchange with a report submitted at credential
+presentation. The Moderator also acts as DAP Leader and Collector; a separate
+Helper holds the other aggregation share. The proofs and report check described
+below require distinct protocol identifiers and a specified DAP integration.
+Message names below follow the MOLE and DAP drafts where applicable; any
+combined upload or additional field is explicitly a \emph{proposed extension}.
+
+\section{Task and notation}
+
+The Moderator publishes an authenticated, ordered Anchor set
+\begin{equation*}
+  \mathcal A=(\mathsf{pk}_0,\ldots,\mathsf{pk}_{n-1}),
+\end{equation*}
+its epoch and credential context, and the report task configuration. The
+experimental report profile uses two aggregators, Field128, and one Prio3
+proof; a Field64 variant is not specified here. The
+Client holds an endorsement
+from Anchor $i$ and defines the \emph{private} tag $j=i+1$. The ordered set
+and the meaning of $j$ remain fixed for the credential's lifetime. A new
+set or mapping requires a new task and credential context.
+
+All commitments below use the same prime-order group and fixed, independent
+generators $H,R$. Let $B_{\mathrm I}$ be the EC-IHAT rerandomization
+generator, and let $B_{\mathrm A},H_1,H_2,H_3,H_4$ be the EC-ACT generators.
+$H_j$ is a new ACT generator for the hidden Anchor attribute. The Moderator
+holds ACT signing secret $x_M$. Distinct domain separators and canonical,
+versioned encodings are required throughout. The Client draws fresh and
+independent blinding factors $\rho_{\mathrm{iss}}$ and $\rho_{\mathrm{rep}}$;
+it never reuses either commitment.
+
+\section{Message map: MOLE, DAP, and the link}
+
+Each entry names a protocol message, its MOLE and DAP portions, and the
+cross-protocol check. ``None'' means that phase has no DAP report. The
+origin receipt is application data, not an existing MOLE or DAP message.
+Helper exchanges may be batched into DAP aggregation jobs.
+
+\begin{description}
+\item[M1: Client--Anchor.] \textbf{MOLE:} Endorsement grant and response.
+  \textbf{DAP:} None. \textbf{Link:} The issuing Anchor is
+  $\mathsf{pk}_i$ in the configured set; no report exists yet.
+\item[M2: Moderator--Client.] \textbf{MOLE:} \texttt{RedemptionChallenge}.
+  \textbf{DAP:} None. \textbf{Link:} Select the accepted Anchor set,
+  epoch, credential context, and binding profile.
+\item[M3: Client--Moderator.] \textbf{MOLE:} \texttt{Redemption} and
+  \texttt{IssuanceRequest} in one \texttt{CredentialRequest}.
+  \textbf{DAP:} None. \textbf{Link:} Both payloads carry identical
+  $\Ciss$; the IHAT proof binds the issuing Anchor to that commitment and
+  the exact ACT request digest. The ACT proof binds $\Ciss$ to hidden $j$
+  in $K$.
+\item[M4: Moderator--Client.] \textbf{MOLE:} \texttt{IssuanceResponse}.
+  \textbf{DAP:} None. \textbf{Link:} The Moderator signs the $K$ accepted
+  in M3; the Client verifies against its saved $K$ and retains $j$.
+\item[M5: Moderator--Client.] \textbf{MOLE:} Credential \texttt{Challenge}
+  (extended for this profile). \textbf{DAP:} Task configuration, not a
+  report. \textbf{Link:} Fix the spend policy, DAP task, origin, and
+  label-policy scope of the presentation.
+\item[M6: Origin--Client.] \textbf{MOLE:} None (application outcome receipt).
+  \textbf{DAP:} None. \textbf{Link:} Authenticate the origin's label and
+  policy version so the Client cannot choose or substitute them.
+\item[M7: Client--Moderator.] \textbf{MOLE:}
+  \texttt{PresentationAndUpdate} with spend proof.
+  \textbf{DAP:} \texttt{Report} in \texttt{UploadRequest}, in the same HTTP
+  submission (proposed combined transport). \textbf{Link:} The MOLE
+  proof binds hidden $j$ to $\Crep$ and the digest of the exact DAP report
+  and outcome scope. A public DAP extension carries $\Crep$; each encrypted
+  private extension carries its $\rho_m$.
+\item[M8: Moderator--Helper.] \textbf{MOLE:} Moderator accepts M7's
+  presentation and records the credential result.
+  \textbf{DAP:} \texttt{AggregationJobInitReq} with \texttt{VerifyInit}
+  (extended). \textbf{Link:} Send the encrypted Helper
+  \texttt{ReportShare}, the Leader's Prio3 verifier share and $P_0$, and
+  an authenticated Moderator acceptance assertion bound to the task,
+  report ID, report digest, and $\Crep$. The Helper cannot independently
+  verify the ACT signing-key proof.
+\item[M9: Helper--Moderator.] \textbf{MOLE:} None.
+  \textbf{DAP:} Aggregation-job response (extended).
+  \textbf{Link:} The Helper computes the verifier message and its own
+  $P_1$, checks Prio3 and $P_0+P_1\in\{\Crep,\Crep+pH\}$, and returns
+  the verifier message and $P_1$. The Leader performs the same checks
+  before counting its output share. No extra preparation round trip is
+  required for one-round Prio3.
+\item[M10: Moderator--Client.] \textbf{MOLE:} \texttt{Update} or recorded
+  \texttt{NoUpdate}. \textbf{DAP:} No report message.
+  \textbf{Link:} Any replacement credential retains hidden $j$; define
+  atomic result recording, rejected reports, and byte-identical retries.
+  No client-visible report authorization token is sent.
+\item[M11: Moderator--Helper.] \textbf{MOLE:} None (Moderator is also
+  Collector). \textbf{DAP:} \texttt{AggregateShareReq} for a later batch.
+  \textbf{Link:} Both sides agree on the accepted report set and scoped
+  task; DAP count, checksum, and batch-release checks apply.
+\item[M12: Helper--Moderator.] \textbf{MOLE:} None.
+  \textbf{DAP:} \texttt{AggregateShare}.
+  \textbf{Link:} Helper encrypts to the Moderator as Collector, which
+  combines it with its own share and learns the
+  released per-Anchor histogram for this origin and label.
+\end{description}
+
+M7 is \emph{not} an existing MOLE HTTP message that automatically uploads a
+DAP report. The combined transport, public commitment extension, private
+blinding-share extensions, mandatory acceptance assertion in M8, and
+commitment points piggybacked on M8--M9 must be specified. Ordinary
+\texttt{Prio3Histogram} and unextended DAP do not verify these bindings.
+
+\section{IHAT redemption and credential request}
+
+Messages M2--M3 are MOLE payloads; they contain no DAP \texttt{Report}.
+The Client prepares the ACT request first so that its exact encoding can be
+bound into the IHAT proof, then sends both payloads in M3.
+
+\paragraph{Client, before sending the combined request.}
+The Client chooses $\rho_{\mathrm{iss}}$ and constructs
+\begin{equation}
+  \Ciss=jH+\rho_{\mathrm{iss}}R.
+\end{equation}
+It prepares the ACT issuance commitment and a proof $\pi_{\mathrm{issue}}$
+of knowledge of the \emph{same} $j$ in both equations:
+\begin{equation}
+  K=kH_2+rH_3+jH_j,
+  \qquad
+  \Ciss=jH+\rho_{\mathrm{iss}}R.
+  \label{eq:issue}
+\end{equation}
+The versioned ACT issuance request contains $(K,\Ciss,\pi_{\mathrm{issue}})$.
+The Client computes its digest $d_{\mathrm{issue}}$ over the complete encoded
+request, so that IHAT redemption can refer to these exact request bytes.
+
+The Client rerandomizes the endorsed IHAT key to $\widehat X$ and supplies
+the ordinary endorsement redemption proof together with a new, joint
+same-Anchor proof. The latter proves the following statement without
+revealing $i$, $\delta$, or $\rho_{\mathrm{iss}}$:
+\begin{equation}
+  \exists\,i,\delta,\rho_{\mathrm{iss}}:\quad
+  0\leq i<n,\qquad
+  \widehat X-\mathsf{pk}_i=\delta B_{\mathrm I},\qquad
+  \Ciss-(i+1)H=\rho_{\mathrm{iss}}R.
+  \label{eq:ihat}
+\end{equation}
+Both equations use the \emph{same branch} $i$. An OR proof over the set is
+one possible realization. Its transcript binds the ordered set and epoch,
+IHAT contexts and challenge, the endorsement redemption, $\Ciss$, and
+$d_{\mathrm{issue}}$. Adding only $\Ciss$ to an ordinary IHAT transcript
+would not prove Equation~\eqref{eq:ihat}.
+
+\paragraph{Moderator.}
+On receipt of M3, the Moderator verifies the ordinary IHAT redemption, the joint proof, the
+challenge and context, the exact ACT request digest, and
+$\pi_{\mathrm{issue}}$. It checks that both requests carry the identical
+$\Ciss$ and atomically checks and records the IHAT nullifier in the
+appropriate replay scope. It learns that an endorsed Anchor has a valid
+hidden index $j$, but neither its value nor the Anchor's identity. The joint IHAT proof
+binds $\Ciss$ to that Anchor; Equation~\eqref{eq:issue} binds the same
+commitment to the credential attribute.
+
+\section{Credential issuance}
+
+\paragraph{Moderator.}
+After accepting M3, the Moderator chooses the initial
+balance $c$ under its policy and signs the ACT message
+\begin{equation}
+  X_A=B_{\mathrm A}+cH_1+\mathsf{ctx}_{\mathrm{cred}}H_4+K.
+  \label{eq:signed}
+\end{equation}
+For the illustrative EC-ACT signature relation, its response contains
+$A=(x_M+e)^{-1}X_A$ and the associated signing proof and parameters. The
+Moderator does not need to open $K$ or learn $j$ to sign it. This is
+MOLE message M4; it carries no DAP payload.
+
+\paragraph{Client.}
+The Client verifies the response against the exact saved $K$ and credential
+context, then stores $(k,c,r,j,A,e)$. Because $K$ in
+Equation~\eqref{eq:signed} contains $jH_j$, a later proof of possession
+of this credential can authenticate $j$ without disclosing it. The
+credential issuance proof and signature, not public equality of
+commitments, carry the binding forward.
+
+\section{Credential presentation and report submission}
+
+An origin supplies an authenticated outcome label and policy version for an
+eligible interaction. This section assumes the outcome is known at
+presentation time. The task fixes the origin and label scope; reports with
+incompatible label semantics are not combined. The Moderator's MOLE
+challenge M5 selects the policy, and the origin supplies application
+receipt M6. Neither is itself a DAP report.
+
+\paragraph{What binds the report to the presentation.}
+The Client submits its ACT presentation, authenticated origin receipt, and
+the exact DAP \texttt{Report} together. The ACT proof uses one hidden witness
+$j$ in both the signed credential and the fresh public report commitment
+$\Crep=jH+\rho_{\mathrm{rep}}R$. Its transcript binds the task, report ID,
+origin and label policy, and a digest of the whole encoded DAP report,
+including both encrypted shares. The Moderator checks that the commitment
+proved in ACT is the one in the report's proposed public extension. This
+identifies the \emph{particular} report authorized by the credential, but
+cannot by itself show which bucket its encrypted VDAF shares count. The
+aggregators supply that final link using the point check in M8--M9; neither
+point is supplied by the Client in the DAP report. This combined submission
+is a proposed transport profile, not an existing DAP upload.
+
+\paragraph{Client, preparing one submission.}
+The Client draws a new $\rho_{\mathrm{rep}}$ and computes
+\begin{equation}
+  \Crep=jH+\rho_{\mathrm{rep}}R.
+  \label{eq:report}
+\end{equation}
+For its private histogram bucket $i=j-1$, it forms a one-hot vector
+$v=(v_0,\ldots,v_{n-1})$ with $v_i=1$ and an auxiliary private tag $t=j$.
+It creates two VDAF input shares of $(v,t)$ and private shares of
+$\rho_{\mathrm{rep}}$, encrypting one pair for the Moderator and the other
+for the Helper. In DAP terms, the report's metadata includes a fresh
+\texttt{report\_id}, which is also the VDAF nonce, and a public extension
+carrying $\Crep$. The DAP \texttt{Report} includes the VDAF public share
+and two HPKE-encrypted \texttt{PlaintextInputShare} values; each plaintext
+contains that aggregator's VDAF input share and a proposed private extension
+carrying $\rho_m$. The task ID identifies the DAP task and versioned
+Anchor mapping. The Client computes a domain-separated digest
+\begin{align}
+  d_{\mathrm{rep}}={}&\Hash(\mathsf{task\_id}\,\|\,\mathsf{origin}\,\|\,
+    \mathsf{label\_policy}\,\|\,\nonumber\\
+    &\qquad\Enc(\mathsf{outcome\_receipt})\,\|\,
+    \Enc(\mathsf{DAP\ Report})).
+  \label{eq:digest}
+\end{align}
+This digest covers the exact report ID, $\Crep$, public share, and both
+ciphertexts through the canonical DAP \texttt{Report} encoding. It excludes
+the ACT spend proof itself to avoid a circular hash dependency.
+
+The Client proves possession and valid use of the credential in an ACT
+presentation whose transcript binds $d_{\mathrm{rep}}$, the task, report
+ID, origin, and label-policy version. Schematically, the spend proof
+demonstrates that the old credential signature authenticates the hidden
+$j$ and that \emph{the same witness} satisfies
+\begin{align}
+  K_{\mathrm{next}}&=k_{\mathrm{next}}H_2+r_{\mathrm{next}}H_3+jH_j,
+    \label{eq:next}\\
+  \Crep&=jH+\rho_{\mathrm{rep}}R.
+    \label{eq:same-j}
+\end{align}
+Here $K_{\mathrm{next}}$ denotes the hidden-attribute portion of the
+replacement credential commitment; the ACT proof also contains its usual
+signature-possession, balance, spend, and allowance constraints. In the
+experimental EC-ACT relation, the signature and hidden-attribute checks
+can be written more concretely as follows. The Client forms
+$A'=r_1r_2 A$ and
+$\bar B=r_1(B_{\mathrm A}+cH_1+kH_2+rH_3+
+\mathsf{ctx}_{\mathrm{cred}}H_4+jH_j)$; the Moderator computes
+$\bar A=x_M A'$ and
+$H'_1=B_{\mathrm A}+kH_2+\mathsf{ctx}_{\mathrm{cred}}H_4$.
+The proof establishes
+\begin{align}
+  \bar A&=x_M A'=-eA'+r_2\bar B,\\
+  H'_1&=r_3\bar B-cH_1-rH_3-jH_j,
+    \qquad r_3=r_1^{-1},\\
+  K_n&=k_{\mathrm{next}}H_2+r_nH_3+jH_j,\\
+  \Crep&=jH+\rho_{\mathrm{rep}}R.
+  \label{eq:spend}
+\end{align}
+In M7, the Client submits the MOLE \texttt{PresentationAndUpdate}, origin
+receipt, and the DAP \texttt{Report} \emph{together} to the Moderator.
+The same $\Crep$ appears in the MOLE proof and the DAP public extension;
+the MOLE transcript binds Equation~\eqref{eq:digest}. This is a new
+combined-transport profile, not an existing DAP upload authenticated by an
+ordinary MOLE header. No client-visible intermediate report-authorization
+token is needed.
+
+\paragraph{Moderator.}
+For M7, the Moderator verifies the credential presentation under the correct signing
+key and context; checks the authenticated outcome label; checks that the
+commitment in the proof is the $\Crep$ in the submitted payload; recomputes
+$d_{\mathrm{rep}}$; and enforces the credential-nullifier and report-ID
+replay rules. It learns neither $j$ nor the individual histogram bucket.
+It then acts as DAP Leader in M8, forwarding the Helper's encrypted
+\texttt{ReportShare} and authenticated common metadata, including a
+Moderator assertion tied to the accepted MOLE presentation and the exact
+task, report ID, $\Crep$, and $d_{\mathrm{rep}}$. The Helper relies on the Moderator's
+authenticated acceptance decision for the ACT proof, but independently
+processes its own VDAF share. For one-round Prio3, the Leader sends its
+verifier share and $P_0$ in M8; the Helper verifies, computes the verifier
+message and $P_1$, and returns both in M9. The Leader verifies on receipt.
+These are extensions to the existing request and response, not a second
+round trip. Both aggregators run the
+Prio3 verification protocol on
+the full shares to establish validity
+\begin{equation}
+  v_u\in\{0,1\}\ (0\leq u<n),\qquad
+  \sum_{u=0}^{n-1}v_u=1,\qquad
+  t=\sum_{u=0}^{n-1}(u+1)v_u,
+  \label{eq:vdaf}
+\end{equation}
+and the prescribed binding of their private $t$ and blinding shares to
+$\Crep$ before either counts an output share. Concretely, if the VDAF field
+has modulus $p$, the group has order $q>2p$, and the two
+canonical tag shares are $t_0,t_1$, each aggregator computes
+\begin{equation}
+  P_m=\mathsf{int}(t_m)H+\rho_mR,
+  \qquad \rho_0+\rho_1=\rho_{\mathrm{rep}}\pmod q.
+\end{equation}
+Both check that $P_0+P_1$ is either $\Crep$ or $\Crep+pH$: the latter
+case accounts for a carry when canonical field shares sum to $t+p$.
+This point exchange is an additional, mandatory aggregation-protocol step,
+not part of ordinary Prio3Histogram verification. Only the $v$
+coordinates enter the histogram aggregate. The Moderator, acting as
+Collector, combines aggregate shares to learn counts by Anchor for this
+origin and outcome label, subject to the task's release policy.
+
+In MOLE response M10, if the Moderator refunds or updates the credential,
+its response signs a
+replacement commitment containing the \emph{same hidden $j$} as
+Equation~\eqref{eq:next}. The Client checks the response and retains $j$
+with the updated balance and secrets. A later report uses another fresh
+commitment as in Equation~\eqref{eq:report}. This response need not wait
+for batch collection, but the profile must say how verification failure,
+result recording, and byte-identical presentation retries interact with
+report admission. Later, in DAP messages M11--M12, the Moderator as
+Collector requests the Helper's encrypted aggregate share for an eligible
+batch and combines it with its own share.
+
+\section{What actually links the two commitments?}
+
+No party compares $\Ciss$ and $\Crep$ directly: their independent
+blindings deliberately make them unlinkable as group elements. Instead,
+Equation~\eqref{eq:ihat} proves that $\Ciss$ contains the redeemed
+Anchor's tag; Equation~\eqref{eq:issue} places that tag in the signed
+credential; and Equations~\eqref{eq:spend} and~\eqref{eq:same-j} prove
+that the credential's tag is the one in $\Crep$. Equation~\eqref{eq:vdaf}
+and the aggregation binding check finally tie it to the counted bucket.
+Each of these links is necessary. A digest or transcript reference alone
+does not prove equality of the hidden tags.
+
+The commitment check enforces report integrity against a cheating Client
+only if both aggregators execute it on their actual shares; a corrupt
+aggregator can forge its check point. A non-colluding Helper is required
+for individual-report privacy. The effect of revealing which field-carry
+comparison succeeds also needs analysis. These are limitations of the
+illustrative construction, not properties supplied by ordinary DAP.
+
+For reporting \emph{only at IHAT redemption}, credential issuance and
+presentation are unnecessary for this purpose. A redemption proof could
+instead bind the actual secret-shared report directly to the IHAT selector,
+as in the experimental VOLE-IHAT share-reporting approach. This note covers
+the different case of carrying the Anchor into a later credential report.
+
+\end{document}

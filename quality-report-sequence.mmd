@@ -1,0 +1,39 @@
+sequenceDiagram
+    participant A as Anchor
+    participant C as Client
+    participant O as Origin
+    participant M as Moderator / DAP Leader / Collector
+    participant H as DAP Helper
+
+    Note over C,M: Task fixes an ordered Anchor set and Field128 Prio3 profile<br/>Anchor at bucket b has hidden tag j = b plus 1
+
+    C->>A: Request endorsement
+    A-->>C: Endorsement
+
+    Note over C: Choose fresh C_issue = j·H plus ρ_issue·R
+    C->>M: Redeem endorsement and joint proof linking endorsed Anchor to C_issue<br/>Request credential with hidden attribute j
+    M->>M: Verify redemption, same-Anchor proof, and issuance proof
+    M-->>C: Issue credential authenticating hidden j
+
+    C->>O: Request quality receipt for an authorized outcome
+    O-->>C: Authenticated outcome label and policy version
+    Note over C,M: Example label is good. Private histogram bucket identifies Anchor b
+
+    Note over C: Choose fresh C_report = j·H plus ρ_report·R<br/>Encode x as one-hot at bucket b, with t = b plus 1<br/>Prio3-shard (x,t) and split ρ_report into ρ₀ plus ρ₁
+    Note over C: Encrypt (VDAF share₀, ρ₀) for Moderator<br/>Encrypt (VDAF share₁, ρ₁) for Helper<br/>Hash task, report ID, nonce, label, C_report, and report shares<br/>Exclude spend proof from digest to avoid a circular dependency
+
+    C->>M: One submission with credential presentation and spend proof,<br/>origin label receipt, C_report, nonce, public share, and both encrypted shares
+    M->>M: Verify spend binds hidden j to C_report and report digest<br/>Check label, task, credential nullifier, and report ID replay
+    M->>M: Decrypt share₀ and expand full (x₀,t₀)<br/>Prio3 verify_init and compute P₀ = t₀·H plus ρ₀·R
+    M->>H: Aggregation init: Helper share, metadata, acceptance assertion,<br/>Leader verifier share and P₀
+    H->>H: Verify acceptance, decrypt and expand full (x₁,t₁)<br/>Prio3 verify_init and compute P₁ = t₁·H plus ρ₁·R<br/>Combine verifier shares, check Prio3 and P₀ plus P₁<br/>equals C_report or C_report plus p·H
+    H-->>M: Aggregation response: verifier message and P₁
+    M->>M: Verify Prio3 message and check P₀ plus P₁<br/>equals C_report or C_report plus p·H
+    Note over M,H: One existing Prio3 request/response with proposed point fields
+
+    Note over M,H: Only after Prio3 validity and commitment binding succeed<br/>drop each local t coordinate and accept only the x output share
+    M->>M: Add x₀ to aggregate for origin / label-policy / "good"
+    H->>H: Add x₁ to corresponding aggregate
+
+    H-->>M: Helper aggregate share
+    M->>M: Combine with own aggregate share and recover<br/>per-Anchor counts for this origin and outcome label

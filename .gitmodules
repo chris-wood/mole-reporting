@@ -1,0 +1,16 @@
+[submodule "mole-drafts"]
+	path = mole-drafts
+	url = https://github.com/chris-wood/internet-drafts.git
+	branch = feat/mole-anchor-reporting
+[submodule "draft-vdaf-commitment-bound-histogram"]
+	path = draft-vdaf-commitment-bound-histogram
+	url = https://github.com/chris-wood/draft-vdaf-commitment-bound-histogram.git
+	branch = feat/mole-anchor-reporting
+[submodule "draft-irtf-cfrg-vdaf"]
+	path = draft-irtf-cfrg-vdaf
+	url = https://github.com/chris-wood/draft-irtf-cfrg-vdaf.git
+	branch = feat/mole-anchor-reporting
+[submodule "libprio-rs"]
+	path = libprio-rs
+	url = https://github.com/chris-wood/libprio-rs.git
+	branch = feat/mole-anchor-reporting
