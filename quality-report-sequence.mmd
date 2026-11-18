@@ -27,9 +27,9 @@ sequenceDiagram
     M->>M: Decrypt share₀ and expand x₀<br/>Derive t₀ = Σ(i+1)x₀[i] mod p<br/>Prio3 verify_init and compute P₀ = t₀·H plus ρ₀·R
     M->>H: Aggregation init: Helper share, metadata, acceptance assertion,<br/>Leader verifier share and P₀
     H->>H: Verify acceptance, decrypt and expand x₁<br/>Derive t₁ = Σ(i+1)x₁[i] mod p<br/>Prio3 verify_init and compute P₁ = t₁·H plus ρ₁·R<br/>Combine verifier shares, check Prio3 and P₀ plus P₁<br/>equals C_report or C_report plus p·H
-    H-->>M: Aggregation response: verifier message and P₁
+    H-->>M: New versioned aggregation response: vanilla verifier message and P₁
     M->>M: Verify Prio3 message and check P₀ plus P₁<br/>equals C_report or C_report plus p·H
-    Note over M,H: One existing Prio3 request/response with proposed point fields
+    Note over M,H: One Prio3 round trip with DAP request extension and new response encoding
 
     Note over M,H: Only after vanilla Prio3 validity and commitment binding succeed<br/>accept the x output shares, never the locally projected t values
     M->>M: Add x₀ to aggregate for origin / label-policy / "good"

@@ -92,7 +92,7 @@ Helper exchanges may be batched into DAP aggregation jobs.
   report ID, report digest, and $\Crep$. The Helper cannot independently
   verify the ACT signing-key proof.
 \item[M9: Helper--Moderator.] \textbf{MOLE:} None.
-  \textbf{DAP:} Aggregation-job response (extended).
+  \textbf{DAP:} Aggregation-job response (new versioned encoding).
   \textbf{Link:} The Helper computes the verifier message and its own
   $P_1$, checks Prio3 and $P_0+P_1\in\{\Crep,\Crep+pH\}$, and returns
   the verifier message and $P_1$. The Leader performs the same checks
@@ -117,7 +117,10 @@ Helper exchanges may be batched into DAP aggregation jobs.
 M7 is \emph{not} an existing MOLE HTTP message that automatically uploads a
 DAP report. The combined transport, public commitment extension, private
 blinding-share extensions, mandatory acceptance assertion in M8, and
-commitment points piggybacked on M8--M9 must be specified. Ordinary
+commitment points piggybacked on M8--M9 must be specified. DAP has an
+aggregation-job request extension but no matching response extension;
+M9 needs a new versioned response encoding, without changing the VDAF
+verifier message. Ordinary
 \texttt{Prio3Histogram} and unextended DAP do not verify these bindings.
 
 \section{IHAT redemption and credential request}

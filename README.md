@@ -32,10 +32,12 @@ Each aggregator receives only its own private blinding share and locally
 derived index share. Neither gets the full report opening, which would reveal
 the small-domain Anchor index by enumeration.
 
-For one-round Prio3, the Leader sends `P_0` with its verifier share in the
-existing aggregation request. The Helper returns `P_1` with the verifier
-message in the existing response: **no extra aggregator round trip**. These
-point fields, the public commitment and private blinding-share extensions,
+For one-round Prio3, the Leader sends `P_0` using a new aggregation-job
+request extension; the Helper returns `P_1` with its verifier message in a
+new versioned response format: **no extra aggregator round trip**. DAP has
+no aggregation-job response extension slot, so this requires a new response
+encoding without modifying the Prio3 verifier payload. These point fields,
+the public commitment and private blinding-share extensions,
 and the authenticated assertion of an accepted MOLE presentation are proposed
 integration work, not current DAP behavior. Both aggregators must honestly
 run the point check for integrity; privacy requires a non-colluding Helper.
@@ -48,7 +50,7 @@ The four directories below are submodules pinned to the experiment's branches.
 | Path | What it contains |
 | --- | --- |
 | [`mole-drafts`](mole-drafts/draft-chris-mole-anchor-quality.md) | The experimental MOLE profile, the IHAT/ACT Python proof variants, and the cross-protocol tests. |
-| [`draft-vdaf-commitment-bound-histogram`](draft-vdaf-commitment-bound-histogram/draft-chris-vdaf-commitment-bound-histogram.md) | The vanilla Prio3Histogram commitment-binding profile. |
+| [`draft-vdaf-commitment-bound-histogram`](draft-vdaf-commitment-bound-histogram/draft-chris-dap-histogram-commitment.md) | The DAP extension proposal for binding vanilla Prio3Histogram reports to commitments (legacy repository name). |
 | [`draft-irtf-cfrg-vdaf`](draft-irtf-cfrg-vdaf/misc/histogram-binding.md) | The Python index-share projection helper and VDAF tests, alongside the base VDAF draft. |
 | [`libprio-rs`](libprio-rs/src/vdaf/prio3.rs) | The Rust index-share projection and P-256 commitment check. |
 
