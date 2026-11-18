@@ -2,7 +2,7 @@
 \usepackage[margin=0.9in]{geometry}
 \usepackage{amsmath,amssymb}
 
-\title{Secret Shares of an Anchor Commitment}
+\title{Projecting an Anchor Index from Histogram Shares}
 \author{}
 \date{}
 
@@ -19,42 +19,30 @@ where $\rho$ is fresh randomness. The blinding is important: if the
 commitment were only $jH$, anyone could try every Anchor tag and identify
 $j$.
 
-\paragraph{Sharing and recombining the commitment.}
-Share both scalars modulo $q$ between two aggregators:
-\[
-  j=j_0+j_1\pmod q,\qquad
-  \rho=\rho_0+\rho_1\pmod q.
-\]
-Each aggregator $m\in\{0,1\}$ computes a group point from its own private
-shares, $C_m=j_mH+\rho_mR$. The points add to the original commitment:
-\[
-  C_0+C_1
-   =(j_0+j_1)H+(\rho_0+\rho_1)R
-   =jH+\rho R=C.
-\]
-The aggregators can exchange the points and compare their sum with a public
-$C$ without revealing their scalar shares or reconstructing $j$.
-
-\paragraph{The VDAF field mismatch.}
-In ordinary Field128 Prio3Histogram, each aggregator holds a private share
-$v_{m,i}$ of one-hot bucket $i$. It derives a 1-based index share locally:
+\paragraph{Projecting the index.}
+In ordinary Field128 Prio3Histogram, aggregator $m\in\{0,1\}$ receives its
+private share $v_{m,i}$ of the histogram for each bucket $i$. It derives a
+1-based index share from those same input shares over the field of order $p$:
 \[
   t_m=\sum_i(i+1)v_{m,i}\pmod p.
 \]
-The normal Prio3 proof establishes that the combined $v$ is one-hot, so
-$t=(t_0+t_1)\bmod p=j$. The commitment group has order $q>2p$. The canonical
-integer shares satisfy
+The normal Prio3 proof establishes that the combined measurement is one-hot,
+so $t=(t_0+t_1)\bmod p=j$. No separately supplied index share or new VDAF
+measurement coordinate is needed. Each aggregator also receives only its own
+private scalar $\rho_m$, with $\rho_0+\rho_1=\rho\pmod q$.
+
+\paragraph{Checking the commitment.}
+Each aggregator computes $P_m=\operatorname{int}(t_m)H+\rho_mR$ and exchanges
+this blinded point with the other aggregator. The commitment group has order
+$q>2p$. The canonical integer representatives of the Field128 shares satisfy
 \[
   \operatorname{int}(t_0)+\operatorname{int}(t_1)
    \in\{\operatorname{int}(t),\operatorname{int}(t)+p\}.
 \]
-Thus, using these projected shares of the actual VDAF histogram input and
-private group blinding shares to form
-$P_m=\operatorname{int}(t_m)H+\rho_mR$ yields either $P_0+P_1=C$ or
-$P_0+P_1=C+pH$ when $C$ commits to the same tag. The second case is the
-field carry, not a second allowed Anchor. Sharing the tag modulo $q$ would
-avoid this carry, but would require a separate proof that those shares match
-the VDAF histogram bucket.
+Thus, when the report counts the same Anchor as the commitment,
+$P_0+P_1\in\{C,C+pH\}$. The second case is the field carry, not a second
+allowed Anchor. The aggregators compare the points without revealing their
+scalar shares or reconstructing $j$.
 
 \paragraph{What equality establishes.}
 Point addition binds the combined shares to the value inside $C$; it does

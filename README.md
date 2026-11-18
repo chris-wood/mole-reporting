@@ -49,7 +49,7 @@ The four directories below are submodules pinned to the experiment's branches.
 | --- | --- |
 | [`mole-drafts`](mole-drafts/draft-chris-mole-anchor-quality.md) | The experimental MOLE profile, the IHAT/ACT Python proof variants, and the cross-protocol tests. |
 | [`draft-vdaf-commitment-bound-histogram`](draft-vdaf-commitment-bound-histogram/draft-chris-vdaf-commitment-bound-histogram.md) | The vanilla Prio3Histogram commitment-binding profile. |
-| [`draft-irtf-cfrg-vdaf`](draft-irtf-cfrg-vdaf/misc/commitment-bound-histogram.md) | The Python index-share projection helper and VDAF tests, alongside the base VDAF draft. |
+| [`draft-irtf-cfrg-vdaf`](draft-irtf-cfrg-vdaf/misc/histogram-binding.md) | The Python index-share projection helper and VDAF tests, alongside the base VDAF draft. |
 | [`libprio-rs`](libprio-rs/src/vdaf/prio3.rs) | The Rust index-share projection and P-256 commitment check. |
 
 The local [message-by-message flow](quality-binding-flow.pdf) has
