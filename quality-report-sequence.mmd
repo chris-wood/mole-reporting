@@ -19,19 +19,19 @@ sequenceDiagram
     O-->>C: Authenticated outcome label and policy version
     Note over C,M: Example label is good. Private histogram bucket identifies Anchor b
 
-    Note over C: Choose fresh C_report = j·H plus ρ_report·R<br/>Encode x as one-hot at bucket b, with t = b plus 1<br/>Prio3-shard (x,t) and split ρ_report into ρ₀ plus ρ₁
+    Note over C: Choose fresh C_report = j·H plus ρ_report·R<br/>Encode x as one-hot at bucket b<br/>Vanilla Prio3Histogram-shard x and split ρ_report into ρ₀ plus ρ₁
     Note over C: Encrypt (VDAF share₀, ρ₀) for Moderator<br/>Encrypt (VDAF share₁, ρ₁) for Helper<br/>Hash task, report ID, nonce, label, C_report, and report shares<br/>Exclude spend proof from digest to avoid a circular dependency
 
     C->>M: One submission with credential presentation and spend proof,<br/>origin label receipt, C_report, nonce, public share, and both encrypted shares
     M->>M: Verify spend binds hidden j to C_report and report digest<br/>Check label, task, credential nullifier, and report ID replay
-    M->>M: Decrypt share₀ and expand full (x₀,t₀)<br/>Prio3 verify_init and compute P₀ = t₀·H plus ρ₀·R
+    M->>M: Decrypt share₀ and expand x₀<br/>Derive t₀ = Σ(i+1)x₀[i] mod p<br/>Prio3 verify_init and compute P₀ = t₀·H plus ρ₀·R
     M->>H: Aggregation init: Helper share, metadata, acceptance assertion,<br/>Leader verifier share and P₀
-    H->>H: Verify acceptance, decrypt and expand full (x₁,t₁)<br/>Prio3 verify_init and compute P₁ = t₁·H plus ρ₁·R<br/>Combine verifier shares, check Prio3 and P₀ plus P₁<br/>equals C_report or C_report plus p·H
+    H->>H: Verify acceptance, decrypt and expand x₁<br/>Derive t₁ = Σ(i+1)x₁[i] mod p<br/>Prio3 verify_init and compute P₁ = t₁·H plus ρ₁·R<br/>Combine verifier shares, check Prio3 and P₀ plus P₁<br/>equals C_report or C_report plus p·H
     H-->>M: Aggregation response: verifier message and P₁
     M->>M: Verify Prio3 message and check P₀ plus P₁<br/>equals C_report or C_report plus p·H
     Note over M,H: One existing Prio3 request/response with proposed point fields
 
-    Note over M,H: Only after Prio3 validity and commitment binding succeed<br/>drop each local t coordinate and accept only the x output share
+    Note over M,H: Only after vanilla Prio3 validity and commitment binding succeed<br/>accept the x output shares, never the locally projected t values
     M->>M: Add x₀ to aggregate for origin / label-policy / "good"
     H->>H: Add x₁ to corresponding aggregate
 

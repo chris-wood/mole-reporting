@@ -36,15 +36,20 @@ The aggregators can exchange the points and compare their sum with a public
 $C$ without revealing their scalar shares or reconstructing $j$.
 
 \paragraph{The VDAF field mismatch.}
-In the proposed Field128 DAP histogram, the VDAF's private tag shares $t_0,t_1$
-instead live in a field of order $p$, while the commitment group has order
-$q>2p$. For the private tag $t=(t_0+t_1)\bmod p$, the canonical integer
-shares satisfy
+In ordinary Field128 Prio3Histogram, each aggregator holds a private share
+$v_{m,i}$ of one-hot bucket $i$. It derives a 1-based index share locally:
+\[
+  t_m=\sum_i(i+1)v_{m,i}\pmod p.
+\]
+The normal Prio3 proof establishes that the combined $v$ is one-hot, so
+$t=(t_0+t_1)\bmod p=j$. The commitment group has order $q>2p$. The canonical
+integer shares satisfy
 \[
   \operatorname{int}(t_0)+\operatorname{int}(t_1)
    \in\{\operatorname{int}(t),\operatorname{int}(t)+p\}.
 \]
-Thus, using the VDAF's actual tag shares and group blinding shares to form
+Thus, using these projected shares of the actual VDAF histogram input and
+private group blinding shares to form
 $P_m=\operatorname{int}(t_m)H+\rho_mR$ yields either $P_0+P_1=C$ or
 $P_0+P_1=C+pH$ when $C$ commits to the same tag. The second case is the
 field carry, not a second allowed Anchor. Sharing the tag modulo $q$ would
@@ -55,8 +60,9 @@ the VDAF histogram bucket.
 Point addition binds the combined shares to the value inside $C$; it does
 not, on its own, establish that this value is the credential's Anchor.
 The MOLE presentation must prove that $C$ contains the credential's signed
-hidden $j$, and the VDAF must verify that its private tag identifies the
-selected one-hot bucket. Both aggregators must enforce the commitment check
-before counting the report.
+hidden $j$, and ordinary Prio3Histogram must verify the one-hot bucket from
+whose shares the index is projected. Both aggregators must enforce the
+commitment check before counting the report. Neither receives the full
+opening $\rho$: that would expose the small-domain index by enumeration.
 
 \end{document}

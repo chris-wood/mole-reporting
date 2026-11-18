@@ -17,5 +17,5 @@ vdaf-poc = { path = "draft-irtf-cfrg-vdaf/poc", editable = true }
 testpaths = [
   "mole-drafts/poc/tests/test_quality_flow.py",
   "mole-drafts/poc/tests/test_quality_binding.py",
-  "draft-irtf-cfrg-vdaf/poc/tests/test_commitment_bound_histogram.py",
+  "draft-irtf-cfrg-vdaf/poc/tests/test_histogram_binding.py",
 ]

@@ -3,10 +3,10 @@
 This repository collects experimental drafts and proof-of-concept code for
 counting origin-scoped quality outcomes by the Anchor that endorsed a client,
 without revealing that Anchor in an individual credential presentation or DAP
-report. The profile uses a two-aggregator **Field128** Prio3 variant, with the
+report. The profile uses ordinary two-aggregator **Field128 Prio3Histogram**, with the
 Moderator acting as DAP Leader and Collector and a separate Helper holding the
-other share. This is a research prototype, not an extension implemented by
-ordinary MOLE, Prio3Histogram, or DAP.
+other share. This is a research prototype: the external commitment check is
+not implemented by ordinary MOLE, Prio3Histogram, or DAP.
 
 ## How the binding works
 
@@ -18,13 +18,19 @@ ordinary MOLE, Prio3Histogram, or DAP.
    commitment and binds a digest of the **exact DAP report**, its task and
    report ID, and the authenticated origin outcome scope. The client submits
    the presentation, outcome receipt, and report together.
-3. The report contains a private one-hot histogram measurement and tag `t`.
-   The experimental Prio3 circuit checks `t = selected bucket + 1`. Each
-   aggregator computes `P_m = int(t_m)*H + rho_m*R` from its own VDAF tag and
-   blinding shares. Both require `P_0 + P_1` to equal `C_report` or
-   `C_report + p*H`, where `p` is the Field128 modulus. The second case
-   accounts for a carry when canonical field shares are added as integers.
-   Only the histogram vector is aggregated.
+3. The report contains an ordinary private one-hot Prio3Histogram measurement.
+   The standard Prio3 validity proof checks that the combined measurement is
+   one-hot. From its own input share `x_m[i]`, each aggregator computes
+   `t_m = sum((i+1)*x_m[i]) mod p`, then computes
+   `P_m = int(t_m)*H + rho_m*R` with its private blinding share. Both require
+   `P_0 + P_1` to equal `C_report` or `C_report + p*H`, where `p` is the
+   Field128 modulus. The second case accounts for a carry when canonical
+   field shares are added as integers. Only the histogram vector is
+   aggregated; no extra VDAF tag, circuit, or algorithm ID is needed.
+
+Each aggregator receives only its own private blinding share and locally
+derived index share. Neither gets the full report opening, which would reveal
+the small-domain Anchor index by enumeration.
 
 For one-round Prio3, the Leader sends `P_0` with its verifier share in the
 existing aggregation request. The Helper returns `P_1` with the verifier
@@ -42,9 +48,9 @@ The four directories below are submodules pinned to the experiment's branches.
 | Path | What it contains |
 | --- | --- |
 | [`mole-drafts`](mole-drafts/draft-chris-mole-anchor-quality.md) | The experimental MOLE profile, the IHAT/ACT Python proof variants, and the cross-protocol tests. |
-| [`draft-vdaf-commitment-bound-histogram`](draft-vdaf-commitment-bound-histogram/draft-chris-vdaf-commitment-bound-histogram.md) | The commitment-bound Prio3Histogram proposal. |
-| [`draft-irtf-cfrg-vdaf`](draft-irtf-cfrg-vdaf/misc/commitment-bound-histogram.md) | The experimental Python Prio3 validity circuit and VDAF tests, alongside the base VDAF draft. |
-| [`libprio-rs`](libprio-rs/src/flp/types/commitment_bound_histogram.rs) | The experimental Rust FLP, Prio3 variant, and P-256 commitment check. |
+| [`draft-vdaf-commitment-bound-histogram`](draft-vdaf-commitment-bound-histogram/draft-chris-vdaf-commitment-bound-histogram.md) | The vanilla Prio3Histogram commitment-binding profile. |
+| [`draft-irtf-cfrg-vdaf`](draft-irtf-cfrg-vdaf/misc/commitment-bound-histogram.md) | The Python index-share projection helper and VDAF tests, alongside the base VDAF draft. |
+| [`libprio-rs`](libprio-rs/src/vdaf/prio3.rs) | The Rust index-share projection and P-256 commitment check. |
 
 The local [message-by-message flow](quality-binding-flow.pdf) has
 [TeX source](quality-binding-flow.tex); the [one-page explanation of secret
@@ -86,7 +92,7 @@ Sigma Protocols submodule must be initialized as shown above.
 
 ### Additional checks
 
-From the same repository root, run all seven focused reporting tests, or the
+From the same repository root, run all six focused reporting tests, or the
 full MOLE Python suite:
 
 ```sh
@@ -97,7 +103,7 @@ uv run --python 3.12 pytest mole-drafts/poc/tests -q
 With Rust and Cargo installed, run the focused Rust tests from this root too:
 
 ```sh
-cargo test --manifest-path libprio-rs/Cargo.toml --features experimental commitment_bound
+cargo test --manifest-path libprio-rs/Cargo.toml --features experimental histogram_binding_tests
 cargo test --manifest-path libprio-rs/Cargo.toml --features experimental wrap_and_wrong_bucket
 cargo fmt --manifest-path libprio-rs/Cargo.toml --check
 ```
